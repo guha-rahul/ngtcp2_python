@@ -41,7 +41,7 @@ First, you need to install the ngtcp2 C library. You can either:
 
 ```bash
 # Development installation
-git clone <your-repo-url>
+git clone https://github.com/guha-rahul/ngtcp2_python.git
 cd ngtcp2-python
 pip install -e .
 
