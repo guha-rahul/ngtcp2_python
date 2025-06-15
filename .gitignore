@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.dylib
+
+# CFFI generated files
+*_cffi.c
+*_cffi.o
+*_cffi.cpython-*.so
+*_cffi.cpython-*.dylib
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+
+# Testing
+.pytest_cache/
