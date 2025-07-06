@@ -21,3 +21,5 @@ venv/
 
 # Testing
 .pytest_cache/
+
+.vscode

@@ -12,36 +12,84 @@ def build_ffi():
     
     # Include the header definitions
     ffibuilder.cdef("""
-        // Constants
-        #define NGTCP2_MAX_CIDLEN 20
+                                        
+        typedef enum ngtcp2_pkt_type {
+            NGTCP2_PKT_VERSION_NEGOTIATION = 128,
+            NGTCP2_PKT_STATELESS_RESET = 129,
+            NGTCP2_PKT_INITIAL = 16,
+            NGTCP2_PKT_0RTT = 17,
+            NGTCP2_PKT_HANDSHAKE = 18,
+            NGTCP2_PKT_RETRY = 19,
+            NGTCP2_PKT_1RTT = 64
+        } ngtcp2_pkt_type;
         
-        // Version info structure
-        typedef struct {
+        typedef enum ngtcp2_path_validation_result {
+            NGTCP2_PATH_VALIDATION_RESULT_SUCCESS = 0x00,
+            NGTCP2_PATH_VALIDATION_RESULT_FAILURE = 0x01,
+            NGTCP2_PATH_VALIDATION_RESULT_ABORTED = 0x02
+        } ngtcp2_path_validation_result;
+        
+        typedef enum ngtcp2_cc_algo {
+            NGTCP2_CC_ALGO_RENO = 0x00,
+            NGTCP2_CC_ALGO_CUBIC = 0x01,
+            NGTCP2_CC_ALGO_BBR = 0x02
+        } ngtcp2_cc_algo;
+                    
+        typedef enum ngtcp2_token_type {
+            NGTCP2_TOKEN_TYPE_UNKNOWN = 0,
+            NGTCP2_TOKEN_TYPE_RETRY = 1,
+            NGTCP2_TOKEN_TYPE_NEW_TOKEN = 2,
+        } ngtcp2_token_type;
+        
+        typedef enum ngtcp2_encryption_level {
+            NGTCP2_ENCRYPTION_LEVEL_INITIAL = 0,
+            NGTCP2_ENCRYPTION_LEVEL_HANDSHAKE = 1,
+            NGTCP2_ENCRYPTION_LEVEL_1RTT = 2,    
+            NGTCP2_ENCRYPTION_LEVEL_0RTT = 3,
+        } ngtcp2_encryption_level;
+        
+        typedef enum ngtcp2_connection_id_status_type {
+            NGTCP2_CONNECTION_ID_STATUS_TYPE_ACTIVATE = 0,
+            NGTCP2_CONNECTION_ID_STATUS_TYPE_DEACTIVATE = 1
+        } ngtcp2_connection_id_status_type;
+        
+        typedef enum ngtcp2_ccerr_type {
+            NGTCP2_CCERR_TYPE_TRANSPORT = 0,            
+            NGTCP2_CCERR_TYPE_APPLICATION = 1,            
+            NGTCP2_CCERR_TYPE_VERSION_NEGOTIATION = 2,            
+            NGTCP2_CCERR_TYPE_IDLE_CLOSE = 3,            
+            NGTCP2_CCERR_TYPE_DROP_CONN = 4,
+            NGTCP2_CCERR_TYPE_RETRY = 5,
+        } ngtcp2_ccerr_type;
+                    
+        typedef struct st_ptls_t st_ptls_t;
+        typedef struct st_ptls_key_schedule_t st_ptls_key_schedule_t;
+        typedef struct ngtcp2_conn ngtcp2_conn;
+                    
+        #define NGTCP2_MAX_CIDLEN 20
+                
+        typedef struct ngtcp2_info {
             int age;
             int version_num;
             const char *version_str;
         } ngtcp2_info;
-        
-        // Connection ID structure
-        typedef struct {
+    
+        typedef struct ngtcp2_cid {
             size_t datalen;
-            uint8_t data[20];  // NGTCP2_MAX_CIDLEN = 20
+            uint8_t data[NGTCP2_MAX_CIDLEN];
         } ngtcp2_cid;
         
-        // Vector structure (like iovec)
-        typedef struct {
+        typedef struct ngtcp2_vec{
             uint8_t *base;
             size_t len;
         } ngtcp2_vec;
         
-        // Core functions
         const ngtcp2_info *ngtcp2_version(int least_version);
+        int ngtcp2_is_supported_version(uint32_t verision);
         
-        // CID functions
         void ngtcp2_cid_init(ngtcp2_cid *cid, const uint8_t *data, size_t datalen);
         int ngtcp2_cid_eq(const ngtcp2_cid *a, const ngtcp2_cid *b);
         
-        // Error handling functions
         const char *ngtcp2_strerror(int liberr);
         int ngtcp2_err_is_fatal(int liberr);
         

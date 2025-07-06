@@ -31,3 +31,12 @@ def get_version_info():
         'version_num': version_info.version_num,
         'version_str': ffi.string(version_info.version_str).decode('utf-8')
     } 
+    
+def is_supported_version(version: int) -> bool:
+    if lib is None:
+        raise RuntimeError("ngtcp2 FFI not build.")
+    is_supported = lib.ngtcp2_is_supported_version(version)
+    if is_supported == 1:
+        return True
+    else:
+        return False
