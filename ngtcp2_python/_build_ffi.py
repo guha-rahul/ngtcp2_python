@@ -61,11 +61,47 @@ def build_ffi():
             NGTCP2_CCERR_TYPE_DROP_CONN = 4,
             NGTCP2_CCERR_TYPE_RETRY = 5,
         } ngtcp2_ccerr_type;
-                    
-        typedef struct st_ptls_t st_ptls_t;
+               
+        typedef struct st_ptls_t st_ptls_t;     
+        typedef struct UINT64_MAX UINT64_MAX;
         typedef struct st_ptls_key_schedule_t st_ptls_key_schedule_t;
         typedef struct ngtcp2_conn ngtcp2_conn;
-                    
+        typedef struct x509_store_st x509_store_st;
+        typedef struct x509_st x509_st;
+        typedef struct evp_md_st evp_md_st;
+        typedef struct NGTCP2_PROTO_VER_V1 NGTCP2_PROTO_VER_V1;
+        typedef struct compiler_thread compiler_thread;
+        typedef struct evp_pkey_st evp_pkey_st;
+        typedef struct evp_cipher_ctx_st evp_cipher_ctx_st;
+        typedef struct stack_st_X509 stack_st_X509;
+        typedef struct hmac_ctx_st hmac_ctx_st;
+        typedef struct evp_mac_ctx_st evp_mac_ctx_st;
+        typedef struct st_ptls_traffic_protection_t st_ptls_traffic_protection_t;
+
+        typedef ptrdiff_t ngtcp2_ssize;
+        typedef void *(*ngtcp2_malloc)(size_t size, void *user_data);
+        typedef void (*ngtcp2_free)(void *ptr, void *user_data);
+        typedef void *(*ngtcp2_calloc)(size_t nmemb, size_t size, void *user_data);
+        typedef void *(*ngtcp2_realloc)(void *ptr, size_t size, void *user_data);
+
+        typedef struct ngtcp2_mem {
+            void *user_data;
+            ngtcp2_malloc malloc;            
+            ngtcp2_free free;
+            ngtcp2_calloc calloc;
+            ngtcp2_realloc realloc;
+        } ngtcp2_mem;
+        
+        typedef struct /*NGTCP2_ALIGN(8)*/ ngtcp2_pkt_info {
+            uint8_t ecn;
+        } ngtcp2_pkt_info;
+        
+        typedef uint64_t ngtcp2_tstamp;
+        typedef uint64_t ngtcp2_duration;
+
+        
+
+                            
         #define NGTCP2_MAX_CIDLEN 20
                 
         typedef struct ngtcp2_info {
