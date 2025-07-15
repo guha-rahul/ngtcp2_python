@@ -12,36 +12,172 @@ def build_ffi():
     
     # Include the header definitions
     ffibuilder.cdef("""
-        // Constants
-        #define NGTCP2_MAX_CIDLEN 20
+                          
+        #   define NGTCP2_MAX_CIDLEN 20
+        #   define NGTCP2_STATELESS_RESET_TOKENLEN 16
+              
+        typedef enum ngtcp2_pkt_type {
+            NGTCP2_PKT_VERSION_NEGOTIATION = 128,
+            NGTCP2_PKT_STATELESS_RESET = 129,
+            NGTCP2_PKT_INITIAL = 16,
+            NGTCP2_PKT_0RTT = 17,
+            NGTCP2_PKT_HANDSHAKE = 18,
+            NGTCP2_PKT_RETRY = 19,
+            NGTCP2_PKT_1RTT = 64
+        } ngtcp2_pkt_type;
         
-        // Version info structure
-        typedef struct {
+        typedef enum ngtcp2_path_validation_result {
+            NGTCP2_PATH_VALIDATION_RESULT_SUCCESS = 0x00,
+            NGTCP2_PATH_VALIDATION_RESULT_FAILURE = 0x01,
+            NGTCP2_PATH_VALIDATION_RESULT_ABORTED = 0x02
+        } ngtcp2_path_validation_result;
+        
+        typedef enum ngtcp2_cc_algo {
+            NGTCP2_CC_ALGO_RENO = 0x00,
+            NGTCP2_CC_ALGO_CUBIC = 0x01,
+            NGTCP2_CC_ALGO_BBR = 0x02
+        } ngtcp2_cc_algo;
+                    
+        typedef enum ngtcp2_token_type {
+            NGTCP2_TOKEN_TYPE_UNKNOWN = 0,
+            NGTCP2_TOKEN_TYPE_RETRY = 1,
+            NGTCP2_TOKEN_TYPE_NEW_TOKEN = 2,
+        } ngtcp2_token_type;
+        
+        typedef enum ngtcp2_encryption_level {
+            NGTCP2_ENCRYPTION_LEVEL_INITIAL = 0,
+            NGTCP2_ENCRYPTION_LEVEL_HANDSHAKE = 1,
+            NGTCP2_ENCRYPTION_LEVEL_1RTT = 2,    
+            NGTCP2_ENCRYPTION_LEVEL_0RTT = 3,
+        } ngtcp2_encryption_level;
+        
+        typedef enum ngtcp2_connection_id_status_type {
+            NGTCP2_CONNECTION_ID_STATUS_TYPE_ACTIVATE = 0,
+            NGTCP2_CONNECTION_ID_STATUS_TYPE_DEACTIVATE = 1
+        } ngtcp2_connection_id_status_type;
+        
+        typedef enum ngtcp2_ccerr_type {
+            NGTCP2_CCERR_TYPE_TRANSPORT = 0,            
+            NGTCP2_CCERR_TYPE_APPLICATION = 1,            
+            NGTCP2_CCERR_TYPE_VERSION_NEGOTIATION = 2,            
+            NGTCP2_CCERR_TYPE_IDLE_CLOSE = 3,            
+            NGTCP2_CCERR_TYPE_DROP_CONN = 4,
+            NGTCP2_CCERR_TYPE_RETRY = 5,
+        } ngtcp2_ccerr_type;
+               
+        typedef struct st_ptls_t st_ptls_t;     
+        typedef struct UINT64_MAX UINT64_MAX;
+        typedef struct st_ptls_key_schedule_t st_ptls_key_schedule_t;
+        typedef struct ngtcp2_conn ngtcp2_conn;
+        typedef struct x509_store_st x509_store_st;
+        typedef struct x509_st x509_st;
+        typedef struct evp_md_st evp_md_st;
+        typedef struct NGTCP2_PROTO_VER_V1 NGTCP2_PROTO_VER_V1;
+        typedef struct compiler_thread compiler_thread;
+        typedef struct evp_pkey_st evp_pkey_st;
+        typedef struct evp_cipher_ctx_st evp_cipher_ctx_st;
+        typedef struct stack_st_X509 stack_st_X509;
+        typedef struct hmac_ctx_st hmac_ctx_st;
+        typedef struct evp_mac_ctx_st evp_mac_ctx_st;
+        typedef struct st_ptls_traffic_protection_t st_ptls_traffic_protection_t;
+
+        typedef ptrdiff_t ngtcp2_ssize;
+        typedef void *(*ngtcp2_malloc)(size_t size, void *user_data);
+        typedef void (*ngtcp2_free)(void *ptr, void *user_data);
+        typedef void *(*ngtcp2_calloc)(size_t nmemb, size_t size, void *user_data);
+        typedef void *(*ngtcp2_realloc)(void *ptr, size_t size, void *user_data);
+
+        typedef struct ngtcp2_mem {
+            void *user_data;
+            ngtcp2_malloc malloc;            
+            ngtcp2_free free;
+            ngtcp2_calloc calloc;
+            ngtcp2_realloc realloc;
+        } ngtcp2_mem;
+        
+        typedef struct /*NGTCP2_ALIGN(8)*/ ngtcp2_pkt_info {
+            uint8_t ecn;
+        } ngtcp2_pkt_info;
+        
+        typedef uint64_t ngtcp2_tstamp;
+        typedef uint64_t ngtcp2_duration;
+
+        typedef struct ngtcp2_cid {
+            size_t datalen;
+            uint8_t data[NGTCP2_MAX_CIDLEN];
+        } ngtcp2_cid;
+
+        typedef struct ngtcp2_vec{
+            uint8_t *base;
+            size_t len;
+        } ngtcp2_vec;
+                                            
+        typedef struct ngtcp2_info {
             int age;
             int version_num;
             const char *version_str;
         } ngtcp2_info;
-        
-        // Connection ID structure
-        typedef struct {
-            size_t datalen;
-            uint8_t data[20];  // NGTCP2_MAX_CIDLEN = 20
-        } ngtcp2_cid;
-        
-        // Vector structure (like iovec)
-        typedef struct {
-            uint8_t *base;
+    
+        typedef struct ngtcp2_pkt_hd {
+            ngtcp2_cid dcid;
+            ngtcp2_cid scid;
+            int64_t pkt_num;
+            const uint8_t *token;
+            size_t tokenlen;
+            size_t pkt_numlen;
             size_t len;
-        } ngtcp2_vec;
+            uint32_t version;
+            uint8_t type;
+            uint8_t flags;
+        } ngtcp2_pkt_hd;
         
-        // Core functions
+        typedef struct ngtcp_pkt_stateless_reset {
+            uint8_t stateless_reset_token[NGTCP2_STATELESS_RESET_TOKENLEN];
+            const uint8_t *rand;
+            size_t randlen;
+        } ngtcp2_pkt_stateless_reset;
+        
+        
+        /*FIXME: Changed from the ngtcp2.h file*/
+        typedef uint16_t ngtcp2_in_port;
+        
+        typedef unsigned int in_addr_t;
+        
+        /*FIXME: 
+        Had to alter the type of sa_data[14] from uint8_t to char
+        as it was showing comparison failure from char sa_data[14]
+        from socket.h in the system library and here.
+        */
+        
+        typedef unsigned short int ngtcp2_sa_family;
+        typedef struct {
+            ngtcp2_sa_family sa_family;
+            char sa_data[14];
+        } ngtcp2_sockaddr;
+                
+        struct in_addr {
+            uint32_t s_addr;
+        }; 
+        typedef unsigned short int sa_family;
+        typedef unsigned short int in_port;
+        struct sockaddr_in {
+            sa_family sin_family;
+            in_port sin_port;
+            struct in_addr sin_addr;
+            uint8_t sin_zero[8];
+        };
+        typedef struct sockaddr_in ngtcp2_sockaddr_in;
+        
+        
+        
+        
+        
         const ngtcp2_info *ngtcp2_version(int least_version);
+        int ngtcp2_is_supported_version(uint32_t verision);
         
-        // CID functions
         void ngtcp2_cid_init(ngtcp2_cid *cid, const uint8_t *data, size_t datalen);
         int ngtcp2_cid_eq(const ngtcp2_cid *a, const ngtcp2_cid *b);
         
-        // Error handling functions
         const char *ngtcp2_strerror(int liberr);
         int ngtcp2_err_is_fatal(int liberr);
         

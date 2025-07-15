@@ -7,9 +7,13 @@ __author__ = "Your Name"
 __email__ = "your-email@example.com"
 
 from .core import *
-from .version import get_version_info
+from .version import (
+    get_version_info,
+    is_supported_version
+)
 
 __all__ = [
     "get_version_info",
+    "is_supported_version",   
     "NGTCP2FFI",
 ] 
