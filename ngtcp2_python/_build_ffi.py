@@ -12,7 +12,10 @@ def build_ffi():
     
     # Include the header definitions
     ffibuilder.cdef("""
-                                        
+                          
+        #   define NGTCP2_MAX_CIDLEN 20
+        #   define NGTCP2_STATELESS_RESET_TOKENLEN 16
+              
         typedef enum ngtcp2_pkt_type {
             NGTCP2_PKT_VERSION_NEGOTIATION = 128,
             NGTCP2_PKT_STATELESS_RESET = 129,
@@ -99,26 +102,75 @@ def build_ffi():
         typedef uint64_t ngtcp2_tstamp;
         typedef uint64_t ngtcp2_duration;
 
-        
+        typedef struct ngtcp2_cid {
+            size_t datalen;
+            uint8_t data[NGTCP2_MAX_CIDLEN];
+        } ngtcp2_cid;
 
-                            
-        #define NGTCP2_MAX_CIDLEN 20
-                
+        typedef struct ngtcp2_vec{
+            uint8_t *base;
+            size_t len;
+        } ngtcp2_vec;
+                                            
         typedef struct ngtcp2_info {
             int age;
             int version_num;
             const char *version_str;
         } ngtcp2_info;
     
-        typedef struct ngtcp2_cid {
-            size_t datalen;
-            uint8_t data[NGTCP2_MAX_CIDLEN];
-        } ngtcp2_cid;
-        
-        typedef struct ngtcp2_vec{
-            uint8_t *base;
+        typedef struct ngtcp2_pkt_hd {
+            ngtcp2_cid dcid;
+            ngtcp2_cid scid;
+            int64_t pkt_num;
+            const uint8_t *token;
+            size_t tokenlen;
+            size_t pkt_numlen;
             size_t len;
-        } ngtcp2_vec;
+            uint32_t version;
+            uint8_t type;
+            uint8_t flags;
+        } ngtcp2_pkt_hd;
+        
+        typedef struct ngtcp_pkt_stateless_reset {
+            uint8_t stateless_reset_token[NGTCP2_STATELESS_RESET_TOKENLEN];
+            const uint8_t *rand;
+            size_t randlen;
+        } ngtcp2_pkt_stateless_reset;
+        
+        
+        /*FIXME: Changed from the ngtcp2.h file*/
+        typedef uint16_t ngtcp2_in_port;
+        
+        typedef unsigned int in_addr_t;
+        
+        /*FIXME: 
+        Had to alter the type of sa_data[14] from uint8_t to char
+        as it was showing comparison failure from char sa_data[14]
+        from socket.h in the system library and here.
+        */
+        
+        typedef unsigned short int ngtcp2_sa_family;
+        typedef struct {
+            ngtcp2_sa_family sa_family;
+            char sa_data[14];
+        } ngtcp2_sockaddr;
+                
+        struct in_addr {
+            uint32_t s_addr;
+        }; 
+        typedef unsigned short int sa_family;
+        typedef unsigned short int in_port;
+        struct sockaddr_in {
+            sa_family sin_family;
+            in_port sin_port;
+            struct in_addr sin_addr;
+            uint8_t sin_zero[8];
+        };
+        typedef struct sockaddr_in ngtcp2_sockaddr_in;
+        
+        
+        
+        
         
         const ngtcp2_info *ngtcp2_version(int least_version);
         int ngtcp2_is_supported_version(uint32_t verision);
