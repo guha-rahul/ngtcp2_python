@@ -5,198 +5,151 @@ CFFI build script for ngtcp2 bindings
 import os
 from cffi import FFI
 
+
+def _first_existing_dir(paths):
+    for p in paths:
+        if p and os.path.isdir(p):
+            return p
+    return None
+
+
 def build_ffi():
     """Build the CFFI extension for ngtcp2"""
-    
+
     ffibuilder = FFI()
-    
-    # Include the header definitions
-    ffibuilder.cdef("""
-                          
-        #   define NGTCP2_MAX_CIDLEN 20
-        #   define NGTCP2_STATELESS_RESET_TOKENLEN 16
-              
-        typedef enum ngtcp2_pkt_type {
-            NGTCP2_PKT_VERSION_NEGOTIATION = 128,
-            NGTCP2_PKT_STATELESS_RESET = 129,
-            NGTCP2_PKT_INITIAL = 16,
-            NGTCP2_PKT_0RTT = 17,
-            NGTCP2_PKT_HANDSHAKE = 18,
-            NGTCP2_PKT_RETRY = 19,
-            NGTCP2_PKT_1RTT = 64
-        } ngtcp2_pkt_type;
-        
-        typedef enum ngtcp2_path_validation_result {
-            NGTCP2_PATH_VALIDATION_RESULT_SUCCESS = 0x00,
-            NGTCP2_PATH_VALIDATION_RESULT_FAILURE = 0x01,
-            NGTCP2_PATH_VALIDATION_RESULT_ABORTED = 0x02
-        } ngtcp2_path_validation_result;
-        
-        typedef enum ngtcp2_cc_algo {
-            NGTCP2_CC_ALGO_RENO = 0x00,
-            NGTCP2_CC_ALGO_CUBIC = 0x01,
-            NGTCP2_CC_ALGO_BBR = 0x02
-        } ngtcp2_cc_algo;
-                    
-        typedef enum ngtcp2_token_type {
-            NGTCP2_TOKEN_TYPE_UNKNOWN = 0,
-            NGTCP2_TOKEN_TYPE_RETRY = 1,
-            NGTCP2_TOKEN_TYPE_NEW_TOKEN = 2,
-        } ngtcp2_token_type;
-        
-        typedef enum ngtcp2_encryption_level {
-            NGTCP2_ENCRYPTION_LEVEL_INITIAL = 0,
-            NGTCP2_ENCRYPTION_LEVEL_HANDSHAKE = 1,
-            NGTCP2_ENCRYPTION_LEVEL_1RTT = 2,    
-            NGTCP2_ENCRYPTION_LEVEL_0RTT = 3,
-        } ngtcp2_encryption_level;
-        
-        typedef enum ngtcp2_connection_id_status_type {
-            NGTCP2_CONNECTION_ID_STATUS_TYPE_ACTIVATE = 0,
-            NGTCP2_CONNECTION_ID_STATUS_TYPE_DEACTIVATE = 1
-        } ngtcp2_connection_id_status_type;
-        
-        typedef enum ngtcp2_ccerr_type {
-            NGTCP2_CCERR_TYPE_TRANSPORT = 0,            
-            NGTCP2_CCERR_TYPE_APPLICATION = 1,            
-            NGTCP2_CCERR_TYPE_VERSION_NEGOTIATION = 2,            
-            NGTCP2_CCERR_TYPE_IDLE_CLOSE = 3,            
-            NGTCP2_CCERR_TYPE_DROP_CONN = 4,
-            NGTCP2_CCERR_TYPE_RETRY = 5,
-        } ngtcp2_ccerr_type;
-               
-        typedef struct st_ptls_t st_ptls_t;     
-        typedef struct UINT64_MAX UINT64_MAX;
-        typedef struct st_ptls_key_schedule_t st_ptls_key_schedule_t;
-        typedef struct ngtcp2_conn ngtcp2_conn;
-        typedef struct x509_store_st x509_store_st;
-        typedef struct x509_st x509_st;
-        typedef struct evp_md_st evp_md_st;
-        typedef struct NGTCP2_PROTO_VER_V1 NGTCP2_PROTO_VER_V1;
-        typedef struct compiler_thread compiler_thread;
-        typedef struct evp_pkey_st evp_pkey_st;
-        typedef struct evp_cipher_ctx_st evp_cipher_ctx_st;
-        typedef struct stack_st_X509 stack_st_X509;
-        typedef struct hmac_ctx_st hmac_ctx_st;
-        typedef struct evp_mac_ctx_st evp_mac_ctx_st;
-        typedef struct st_ptls_traffic_protection_t st_ptls_traffic_protection_t;
 
-        typedef ptrdiff_t ngtcp2_ssize;
-        typedef void *(*ngtcp2_malloc)(size_t size, void *user_data);
-        typedef void (*ngtcp2_free)(void *ptr, void *user_data);
-        typedef void *(*ngtcp2_calloc)(size_t nmemb, size_t size, void *user_data);
-        typedef void *(*ngtcp2_realloc)(void *ptr, size_t size, void *user_data);
-
-        typedef struct ngtcp2_mem {
-            void *user_data;
-            ngtcp2_malloc malloc;            
-            ngtcp2_free free;
-            ngtcp2_calloc calloc;
-            ngtcp2_realloc realloc;
-        } ngtcp2_mem;
-        
-        typedef struct /*NGTCP2_ALIGN(8)*/ ngtcp2_pkt_info {
-            uint8_t ecn;
-        } ngtcp2_pkt_info;
-        
-        typedef uint64_t ngtcp2_tstamp;
-        typedef uint64_t ngtcp2_duration;
-
-        typedef struct ngtcp2_cid {
-            size_t datalen;
-            uint8_t data[NGTCP2_MAX_CIDLEN];
-        } ngtcp2_cid;
-
-        typedef struct ngtcp2_vec{
-            uint8_t *base;
-            size_t len;
-        } ngtcp2_vec;
-                                            
+    # Minimal, stable subset of declarations required by our Python API
+    ffibuilder.cdef(
+        """
         typedef struct ngtcp2_info {
             int age;
             int version_num;
             const char *version_str;
         } ngtcp2_info;
-    
-        typedef struct ngtcp2_pkt_hd {
-            ngtcp2_cid dcid;
-            ngtcp2_cid scid;
-            int64_t pkt_num;
-            const uint8_t *token;
-            size_t tokenlen;
-            size_t pkt_numlen;
-            size_t len;
-            uint32_t version;
-            uint8_t type;
-            uint8_t flags;
-        } ngtcp2_pkt_hd;
-        
-        typedef struct ngtcp_pkt_stateless_reset {
-            uint8_t stateless_reset_token[NGTCP2_STATELESS_RESET_TOKENLEN];
-            const uint8_t *rand;
-            size_t randlen;
-        } ngtcp2_pkt_stateless_reset;
-        
-        
-        /*FIXME: Changed from the ngtcp2.h file*/
-        typedef uint16_t ngtcp2_in_port;
-        
-        typedef unsigned int in_addr_t;
-        
-        /*FIXME: 
-        Had to alter the type of sa_data[14] from uint8_t to char
-        as it was showing comparison failure from char sa_data[14]
-        from socket.h in the system library and here.
-        */
-        
-        typedef unsigned short int ngtcp2_sa_family;
-        typedef struct {
-            ngtcp2_sa_family sa_family;
-            char sa_data[14];
-        } ngtcp2_sockaddr;
-                
-        struct in_addr {
-            uint32_t s_addr;
-        }; 
-        typedef unsigned short int sa_family;
-        typedef unsigned short int in_port;
-        struct sockaddr_in {
-            sa_family sin_family;
-            in_port sin_port;
-            struct in_addr sin_addr;
-            uint8_t sin_zero[8];
-        };
-        typedef struct sockaddr_in ngtcp2_sockaddr_in;
-        
-        
-        
-        
-        
+
+        typedef struct ngtcp2_cid {
+            size_t datalen;
+            unsigned char data[20];
+        } ngtcp2_cid;
+
+        typedef struct ngtcp2_conn ngtcp2_conn;  /* opaque */
+
+        typedef enum ngtcp2_pkt_type {
+            NGTCP2_PKT_VERSION_NEGOTIATION = 0x80,
+            NGTCP2_PKT_STATELESS_RESET = 0x81,
+            NGTCP2_PKT_INITIAL = 0x10,
+            NGTCP2_PKT_0RTT = 0x11,
+            NGTCP2_PKT_HANDSHAKE = 0x12,
+            NGTCP2_PKT_RETRY = 0x13,
+            NGTCP2_PKT_1RTT = 0x40
+        } ngtcp2_pkt_type;
+
+        typedef struct ngtcp2_version_cid {
+            unsigned int version;
+            const unsigned char *dcid;
+            size_t dcidlen;
+            const unsigned char *scid;
+            size_t scidlen;
+        } ngtcp2_version_cid;
+
         const ngtcp2_info *ngtcp2_version(int least_version);
-        int ngtcp2_is_supported_version(uint32_t verision);
-        
-        void ngtcp2_cid_init(ngtcp2_cid *cid, const uint8_t *data, size_t datalen);
+        int ngtcp2_is_supported_version(unsigned int version);
+        int ngtcp2_is_reserved_version(unsigned int version);
+        unsigned int ngtcp2_select_version(const unsigned int *preferred_versions,
+                                           size_t preferred_versionslen,
+                                           const unsigned int *offered_versions,
+                                           size_t offered_versionslen);
+
+        void ngtcp2_cid_init(ngtcp2_cid *cid, const unsigned char *data, size_t datalen);
         int ngtcp2_cid_eq(const ngtcp2_cid *a, const ngtcp2_cid *b);
-        
+
         const char *ngtcp2_strerror(int liberr);
         int ngtcp2_err_is_fatal(int liberr);
-        
-        // Add more function declarations as needed
-    """)
-    
-    # Determine library paths
-    ngtcp2_include_dir = os.environ.get('NGTCP2_INCLUDE_DIR', '/usr/local/include')
-    ngtcp2_lib_dir = os.environ.get('NGTCP2_LIB_DIR', '/usr/local/lib')
-    
-    # For local development, use the build directory if it exists
-    local_include = "/Users/rahulguha/ngtcp2/build/include"
-    local_lib = "/Users/rahulguha/ngtcp2/build/lib"
-    
-    if os.path.exists(local_include):
-        ngtcp2_include_dir = local_include
-    if os.path.exists(local_lib):
-        ngtcp2_lib_dir = local_lib
-    
+        unsigned long long ngtcp2_err_infer_quic_transport_error_code(int liberr);
+        int ngtcp2_is_bidi_stream(long long stream_id);
+
+        /* Simple connection getters (no complex structs returned by value) */
+        unsigned int ngtcp2_conn_get_client_chosen_version(ngtcp2_conn *conn);
+        unsigned int ngtcp2_conn_get_negotiated_version(ngtcp2_conn *conn);
+        unsigned long long ngtcp2_conn_get_max_data_left(ngtcp2_conn *conn);
+        unsigned long long ngtcp2_conn_get_max_stream_data_left(ngtcp2_conn *conn, long long stream_id);
+        unsigned long long ngtcp2_conn_get_streams_bidi_left(ngtcp2_conn *conn);
+        unsigned long long ngtcp2_conn_get_streams_uni_left(ngtcp2_conn *conn);
+        unsigned long long ngtcp2_conn_get_cwnd_left(ngtcp2_conn *conn);
+        size_t ngtcp2_conn_get_max_tx_udp_payload_size(ngtcp2_conn *conn);
+        size_t ngtcp2_conn_get_send_quantum(ngtcp2_conn *conn);
+        size_t ngtcp2_conn_get_stream_loss_count(ngtcp2_conn *conn, long long stream_id);
+        int ngtcp2_conn_is_server(ngtcp2_conn *conn);
+        int ngtcp2_conn_is_local_stream(ngtcp2_conn *conn, long long stream_id);
+        int ngtcp2_conn_in_closing_period(ngtcp2_conn *conn);
+        int ngtcp2_conn_in_draining_period(ngtcp2_conn *conn);
+        int ngtcp2_conn_get_tls_error(ngtcp2_conn *conn);
+        int ngtcp2_conn_after_retry(ngtcp2_conn *conn);
+        int ngtcp2_conn_get_handshake_completed(ngtcp2_conn *conn);
+        int ngtcp2_conn_tls_early_data_rejected(ngtcp2_conn *conn);
+        int ngtcp2_conn_get_tls_early_data_rejected(ngtcp2_conn *conn);
+
+        /* CID getters */
+        const ngtcp2_cid *ngtcp2_conn_get_dcid(ngtcp2_conn *conn);
+        const ngtcp2_cid *ngtcp2_conn_get_client_initial_dcid(ngtcp2_conn *conn);
+        size_t ngtcp2_conn_get_scid(ngtcp2_conn *conn, ngtcp2_cid *dest);
+
+        /* Packet header helpers */
+        int ngtcp2_pkt_decode_version_cid(ngtcp2_version_cid *dest,
+                                          const unsigned char *data,
+                                          size_t datalen,
+                                          size_t short_dcidlen);
+        """
+    )
+
+    # Determine include and library directories (standalone)
+    default_prefix = os.environ.get("NGTCP2_PREFIX", os.path.expanduser("~/.local"))
+
+    env_include = os.environ.get("NGTCP2_INCLUDE_DIR")
+    env_lib = os.environ.get("NGTCP2_LIB_DIR")
+
+    # Try pkg-config first if available
+    pc_include = None
+    pc_libdir = None
+    try:
+        import subprocess
+
+        cflags = subprocess.check_output(["pkg-config", "--cflags", "libngtcp2"], text=True).strip()
+        libs = subprocess.check_output(["pkg-config", "--libs-only-L", "libngtcp2"], text=True).strip()
+        for token in cflags.split():
+            if token.startswith("-I"):
+                pc_include = token[2:]
+                break
+        for token in libs.split():
+            if token.startswith("-L"):
+                pc_libdir = token[2:]
+                break
+    except Exception:
+        pass
+
+    candidate_includes = [
+        env_include,
+        pc_include,
+        os.path.join(default_prefix, "include"),
+        "/usr/local/include",
+        "/opt/homebrew/include",
+    ]
+    candidate_libs = [
+        env_lib,
+        pc_libdir,
+        os.path.join(default_prefix, "lib"),
+        "/usr/local/lib",
+        "/opt/homebrew/lib",
+    ]
+
+    ngtcp2_include_dir = _first_existing_dir(candidate_includes) or "/usr/local/include"
+    ngtcp2_lib_dir = _first_existing_dir(candidate_libs) or "/usr/local/lib"
+
+    extra_link_args = []
+    if os.path.isdir(ngtcp2_lib_dir):
+        # Embed rpath so the extension can locate libngtcp2 at runtime
+        extra_link_args = [f"-Wl,-rpath,{ngtcp2_lib_dir}"]
+
     ffibuilder.set_source(
         "ngtcp2_python._ngtcp2_cffi",
         """
@@ -205,10 +158,12 @@ def build_ffi():
         libraries=["ngtcp2"],
         include_dirs=[ngtcp2_include_dir],
         library_dirs=[ngtcp2_lib_dir],
+        extra_link_args=extra_link_args,
     )
-    
+
     return ffibuilder
+
 
 if __name__ == "__main__":
     ffibuilder = build_ffi()
-    ffibuilder.compile(verbose=True) 
+    ffibuilder.compile(verbose=True)

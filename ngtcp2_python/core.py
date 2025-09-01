@@ -90,4 +90,127 @@ class NGTCP2FFI:
         Returns:
             bool: True if error is fatal, False otherwise
         """
-        return bool(self.lib.ngtcp2_err_is_fatal(error_code)) 
+        return bool(self.lib.ngtcp2_err_is_fatal(error_code))
+
+    def infer_quic_transport_error_code(self, lib_error: int) -> int:
+        """Map libngtcp2 error code to QUIC transport error code."""
+        return int(self.lib.ngtcp2_err_infer_quic_transport_error_code(lib_error))
+
+    def is_bidi_stream(self, stream_id: int) -> bool:
+        """Return True if the given stream_id is bidirectional."""
+        return bool(self.lib.ngtcp2_is_bidi_stream(stream_id))
+
+    def is_reserved_version(self, version: int) -> bool:
+        """Return True if the given QUIC version is reserved."""
+        return bool(self.lib.ngtcp2_is_reserved_version(version))
+
+    def select_version(self, preferred_versions: list[int], offered_versions: list[int]) -> int:
+        """Select a version from offered set given preferred order.
+        Returns 0 if none selected.
+        """
+        pref_arr = self.ffi.new("unsigned int[]", preferred_versions)
+        off_arr = self.ffi.new("unsigned int[]", offered_versions)
+        return int(self.lib.ngtcp2_select_version(
+            pref_arr, len(preferred_versions), off_arr, len(offered_versions)
+        ))
+
+    # --- Simple ngtcp2_conn accessors (accept an opaque pointer) ---
+    def conn_get_client_chosen_version(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_client_chosen_version(conn_ptr))
+
+    def conn_get_negotiated_version(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_negotiated_version(conn_ptr))
+
+    def conn_get_max_data_left(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_max_data_left(conn_ptr))
+
+    def conn_get_max_stream_data_left(self, conn_ptr, stream_id: int) -> int:
+        return int(self.lib.ngtcp2_conn_get_max_stream_data_left(conn_ptr, stream_id))
+
+    def conn_get_streams_bidi_left(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_streams_bidi_left(conn_ptr))
+
+    def conn_get_streams_uni_left(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_streams_uni_left(conn_ptr))
+
+    def conn_get_cwnd_left(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_cwnd_left(conn_ptr))
+
+    def conn_get_max_tx_udp_payload_size(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_max_tx_udp_payload_size(conn_ptr))
+
+    def conn_get_send_quantum(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_send_quantum(conn_ptr))
+
+    def conn_get_stream_loss_count(self, conn_ptr, stream_id: int) -> int:
+        return int(self.lib.ngtcp2_conn_get_stream_loss_count(conn_ptr, stream_id))
+
+    def conn_is_server(self, conn_ptr) -> bool:
+        return bool(self.lib.ngtcp2_conn_is_server(conn_ptr))
+
+    def conn_is_local_stream(self, conn_ptr, stream_id: int) -> bool:
+        return bool(self.lib.ngtcp2_conn_is_local_stream(conn_ptr, stream_id))
+
+    def conn_in_closing_period(self, conn_ptr) -> bool:
+        return bool(self.lib.ngtcp2_conn_in_closing_period(conn_ptr))
+
+    def conn_in_draining_period(self, conn_ptr) -> bool:
+        return bool(self.lib.ngtcp2_conn_in_draining_period(conn_ptr))
+
+    def conn_get_handshake_completed(self, conn_ptr) -> bool:
+        return bool(self.lib.ngtcp2_conn_get_handshake_completed(conn_ptr))
+
+    def conn_get_tls_error(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_get_tls_error(conn_ptr))
+
+    def conn_after_retry(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_after_retry(conn_ptr))
+
+    def conn_tls_early_data_rejected(self, conn_ptr) -> int:
+        return int(self.lib.ngtcp2_conn_tls_early_data_rejected(conn_ptr))
+
+    def conn_get_tls_early_data_rejected(self, conn_ptr) -> bool:
+        return bool(self.lib.ngtcp2_conn_get_tls_early_data_rejected(conn_ptr))
+
+    # --- CID accessors ---
+    def conn_get_dcid_bytes(self, conn_ptr) -> bytes:
+        cid_ptr = self.lib.ngtcp2_conn_get_dcid(conn_ptr)
+        if cid_ptr == self.ffi.NULL or cid_ptr.datalen == 0:
+            return b""
+        return bytes(self.ffi.buffer(cid_ptr.data, cid_ptr.datalen))
+
+    def conn_get_client_initial_dcid_bytes(self, conn_ptr) -> bytes:
+        cid_ptr = self.lib.ngtcp2_conn_get_client_initial_dcid(conn_ptr)
+        if cid_ptr == self.ffi.NULL or cid_ptr.datalen == 0:
+            return b""
+        return bytes(self.ffi.buffer(cid_ptr.data, cid_ptr.datalen))
+
+    def conn_get_scids(self, conn_ptr) -> list[bytes]:
+        # First query count
+        count = self.lib.ngtcp2_conn_get_scid(conn_ptr, self.ffi.NULL)
+        if count == 0:
+            return []
+        arr = self.ffi.new("ngtcp2_cid[]", count)
+        wrote = self.lib.ngtcp2_conn_get_scid(conn_ptr, arr)
+        result: list[bytes] = []
+        for i in range(int(wrote)):
+            datalen = arr[i].datalen
+            if datalen:
+                result.append(bytes(self.ffi.buffer(arr[i].data, datalen)))
+            else:
+                result.append(b"")
+        return result
+
+    # --- Packet header helpers ---
+    def pkt_decode_version_cid(self, packet: bytes, short_dcidlen: int = 0):
+        """Decode version and CIDs from raw QUIC packet bytes.
+        Returns dict with keys: rc, version, dcid (bytes), scid (bytes).
+        """
+        dest = self.ffi.new("ngtcp2_version_cid *")
+        buf = self.ffi.from_buffer(packet)
+        rc = self.lib.ngtcp2_pkt_decode_version_cid(dest, buf, len(packet), short_dcidlen)
+        # rc can be 0 or a negative error; dest is still filled per docs on VN case
+        version = int(dest.version)
+        dcid = bytes(self.ffi.buffer(dest.dcid, dest.dcidlen)) if dest.dcid and dest.dcidlen else b""
+        scid = bytes(self.ffi.buffer(dest.scid, dest.scidlen)) if dest.scid and dest.scidlen else b""
+        return {"rc": int(rc), "version": version, "dcid": dcid, "scid": scid} 
