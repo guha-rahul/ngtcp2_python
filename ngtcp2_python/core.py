@@ -201,6 +201,10 @@ class NGTCP2FFI:
                 result.append(b"")
         return result
 
+    # --- Path helpers ---
+    def path_eq(self, path_a_ptr, path_b_ptr) -> bool:
+        return bool(self.lib.ngtcp2_path_eq(path_a_ptr, path_b_ptr))
+
     # --- Packet header helpers ---
     def pkt_decode_version_cid(self, packet: bytes, short_dcidlen: int = 0):
         """Decode version and CIDs from raw QUIC packet bytes.
@@ -209,8 +213,38 @@ class NGTCP2FFI:
         dest = self.ffi.new("ngtcp2_version_cid *")
         buf = self.ffi.from_buffer(packet)
         rc = self.lib.ngtcp2_pkt_decode_version_cid(dest, buf, len(packet), short_dcidlen)
-        # rc can be 0 or a negative error; dest is still filled per docs on VN case
         version = int(dest.version)
         dcid = bytes(self.ffi.buffer(dest.dcid, dest.dcidlen)) if dest.dcid and dest.dcidlen else b""
         scid = bytes(self.ffi.buffer(dest.scid, dest.scidlen)) if dest.scid and dest.scidlen else b""
-        return {"rc": int(rc), "version": version, "dcid": dcid, "scid": scid} 
+        return {"rc": int(rc), "version": version, "dcid": dcid, "scid": scid}
+
+    def pkt_decode_hd_long(self, packet: bytes):
+        """Decode QUIC long header. Returns dict with key fields and rc (bytes decoded or <0)."""
+        hd = self.ffi.new("ngtcp2_pkt_hd *")
+        buf = self.ffi.from_buffer(packet)
+        rc = self.lib.ngtcp2_pkt_decode_hd_long(hd, buf, len(packet))
+        return {
+            "rc": int(rc),
+            "version": int(hd.version),
+            "type": int(hd.type),
+            "flags": int(hd.flags),
+            "dcid": bytes(self.ffi.buffer(hd.dcid.data, hd.dcid.datalen)),
+            "scid": bytes(self.ffi.buffer(hd.scid.data, hd.scid.datalen)),
+            "token": bytes(self.ffi.buffer(hd.token, hd.tokenlen)) if hd.token and hd.tokenlen else b"",
+            "pkt_numlen": int(hd.pkt_numlen),
+            "len": int(hd.len),
+        }
+
+    def pkt_decode_hd_short(self, packet: bytes, dcidlen: int):
+        """Decode QUIC short header. Returns dict with key fields and rc (bytes decoded or <0)."""
+        hd = self.ffi.new("ngtcp2_pkt_hd *")
+        buf = self.ffi.from_buffer(packet)
+        rc = self.lib.ngtcp2_pkt_decode_hd_short(hd, buf, len(packet), dcidlen)
+        return {
+            "rc": int(rc),
+            "type": int(hd.type),
+            "flags": int(hd.flags),
+            "dcid": bytes(self.ffi.buffer(hd.dcid.data, hd.dcid.datalen)),
+            "pkt_numlen": int(hd.pkt_numlen),
+            "len": int(hd.len),
+        } 

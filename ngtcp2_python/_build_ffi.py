@@ -44,6 +44,59 @@ def build_ffi():
             NGTCP2_PKT_1RTT = 0x40
         } ngtcp2_pkt_type;
 
+        /* Packet flags */
+        enum { NGTCP2_PKT_FLAG_NONE = 0x00u };
+        enum { NGTCP2_PKT_FLAG_LONG_FORM = 0x01u };
+        enum { NGTCP2_PKT_FLAG_FIXED_BIT_CLEAR = 0x02u };
+        enum { NGTCP2_PKT_FLAG_KEY_PHASE = 0x04u };
+
+        /* Common macros exposed as enum constants for CFFI */
+        enum { NGTCP2_MAX_CIDLEN = 20 };
+        enum { NGTCP2_STATELESS_RESET_TOKENLEN = 16 };
+        enum {
+            NGTCP2_ERR_INVALID_ARGUMENT = -201,
+            NGTCP2_ERR_NOBUF = -202,
+            NGTCP2_ERR_PROTO = -203,
+            NGTCP2_ERR_INVALID_STATE = -204,
+            NGTCP2_ERR_ACK_FRAME = -205,
+            NGTCP2_ERR_STREAM_ID_BLOCKED = -206,
+            NGTCP2_ERR_STREAM_IN_USE = -207,
+            NGTCP2_ERR_STREAM_DATA_BLOCKED = -208,
+            NGTCP2_ERR_FLOW_CONTROL = -209,
+            NGTCP2_ERR_CONNECTION_ID_LIMIT = -210,
+            NGTCP2_ERR_STREAM_LIMIT = -211,
+            NGTCP2_ERR_FINAL_SIZE = -212,
+            NGTCP2_ERR_CRYPTO = -213,
+            NGTCP2_ERR_PKT_NUM_EXHAUSTED = -214,
+            NGTCP2_ERR_REQUIRED_TRANSPORT_PARAM = -215,
+            NGTCP2_ERR_MALFORMED_TRANSPORT_PARAM = -216,
+            NGTCP2_ERR_FRAME_ENCODING = -217,
+            NGTCP2_ERR_DECRYPT = -218,
+            NGTCP2_ERR_STREAM_SHUT_WR = -219,
+            NGTCP2_ERR_STREAM_NOT_FOUND = -220,
+            NGTCP2_ERR_STREAM_STATE = -221,
+            NGTCP2_ERR_RECV_VERSION_NEGOTIATION = -222,
+            NGTCP2_ERR_CLOSING = -223,
+            NGTCP2_ERR_DRAINING = -224,
+            NGTCP2_ERR_TRANSPORT_PARAM = -225,
+            NGTCP2_ERR_DISCARD_PKT = -226,
+            NGTCP2_ERR_CONN_ID_BLOCKED = -227,
+            NGTCP2_ERR_INTERNAL = -228,
+            NGTCP2_ERR_CRYPTO_BUFFER_EXCEEDED = -229,
+            NGTCP2_ERR_WRITE_MORE = -230,
+            NGTCP2_ERR_RETRY = -231,
+            NGTCP2_ERR_DROP_CONN = -232,
+            NGTCP2_ERR_AEAD_LIMIT_REACHED = -233,
+            NGTCP2_ERR_NO_VIABLE_PATH = -234,
+            NGTCP2_ERR_VERSION_NEGOTIATION = -235,
+            NGTCP2_ERR_HANDSHAKE_TIMEOUT = -236,
+            NGTCP2_ERR_VERSION_NEGOTIATION_FAILURE = -237,
+            NGTCP2_ERR_IDLE_CLOSE = -238,
+            NGTCP2_ERR_FATAL = -500,
+            NGTCP2_ERR_NOMEM = -501,
+            NGTCP2_ERR_CALLBACK_FAILURE = -502
+        };
+
         typedef struct ngtcp2_version_cid {
             unsigned int version;
             const unsigned char *dcid;
@@ -51,6 +104,19 @@ def build_ffi():
             const unsigned char *scid;
             size_t scidlen;
         } ngtcp2_version_cid;
+
+        typedef struct ngtcp2_pkt_hd {
+            ngtcp2_cid dcid;
+            ngtcp2_cid scid;
+            long long pkt_num;
+            const unsigned char *token;
+            size_t tokenlen;
+            size_t pkt_numlen;
+            size_t len;
+            unsigned int version;
+            unsigned char type;
+            unsigned char flags;
+        } ngtcp2_pkt_hd;
 
         const ngtcp2_info *ngtcp2_version(int least_version);
         int ngtcp2_is_supported_version(unsigned int version);
@@ -99,6 +165,18 @@ def build_ffi():
                                           const unsigned char *data,
                                           size_t datalen,
                                           size_t short_dcidlen);
+        long long ngtcp2_pkt_decode_hd_long(ngtcp2_pkt_hd *dest,
+                                            const unsigned char *pkt,
+                                            size_t pktlen);
+        long long ngtcp2_pkt_decode_hd_short(ngtcp2_pkt_hd *dest,
+                                             const unsigned char *pkt,
+                                             size_t pktlen,
+                                             size_t dcidlen);
+
+        /* Path helpers (opaque-safe usage via pointers) */
+        typedef struct ngtcp2_path ngtcp2_path;  /* opaque for Python */
+        void ngtcp2_path_copy(ngtcp2_path *dest, const ngtcp2_path *src);
+        int ngtcp2_path_eq(const ngtcp2_path *a, const ngtcp2_path *b);
         """
     )
 
